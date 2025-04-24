@@ -1,0 +1,71 @@
+.tile {
+    width: 100px;
+    height: 100px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: opacity 0.3s ease-out, transform 0.3s ease-in-out;
+  }
+  
+  .tile img {
+    width: 80%;
+    height: 80%;
+  }
+  
+  .board {
+    display: grid;
+    grid-template-columns: repeat(6, 100px);
+    grid-gap: 10px;
+    justify-content: center;
+  }
+  
+  .score {
+    margin-top: 20px;
+    font-size: 24px;
+    color: #333;
+  }
+  
+  .fadeOut {
+    animation: fadeOut 0.5s forwards;
+  }
+  
+  .fadeIn {
+    animation: fadeIn 0.5s forwards;
+  }
+  
+  .slide {
+    animation: slide 0.5s forwards;
+  }
+  
+  @keyframes fadeOut {
+    0% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slide {
+    0% {
+      transform: translateY(-100px);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }

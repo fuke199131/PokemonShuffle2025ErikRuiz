@@ -1,167 +1,143 @@
-import React, { useEffect, useState } from 'react';
-import shufflePokemon from '/workspaces/PokemonShuffle2025ErikRuiz/src/datos/Pokemons.js';
+import React, { useState, useEffect } from 'react';
+import Tile from './Tile';
+import { shufflePokemon } from '../datos/pokemons.js';
 
-const BOARD_ROWS = 6;
-const BOARD_COLS = 6;
-const LEVEL_UP_SCORE = 10000
-
-
-const getRandomPokemon = () => {
-  const randomIndex = Math.floor(Math.random() * shufflePokemon.length);
-  return shufflePokemon[randomIndex];
-};
-
-
-const generateBoard = () => {
-  return Array.from({ length: BOARD_ROWS }, () =>
-    Array.from({ length: BOARD_COLS }, () => getRandomPokemon())
-  );
-};
-
-
-const playSound = (sound) => {
-  const audio = new Audio(`/sounds/${sound}.mp3`);
-  audio.play();
-};
-
-const Board = ({ playerProfile, setPlayerProfile, onGameOver }) => {
+const Board = () => {
   const [board, setBoard] = useState(generateBoard());
-  const [selected, setSelected] = useState(null);
-  const [score, setScore] = useState(playerProfile.score || 0);
-  const [level, setLevel] = useState(playerProfile.level || 1);
-  const [gameStarted, setGameStarted] = useState(false);
+  const [score, setScore] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
 
-  useEffect(() => {
-    const savedProfile = JSON.parse(localStorage.getItem('player-profile'));
-    if (savedProfile) {
-      setPlayerProfile(savedProfile);
-      setScore(savedProfile.score);
-      setLevel(savedProfile.level);
-    }
-  }, []);
+  // Genera el tablero con Pokémon aleatorios
+  function generateBoard() {
+    const rows = 6;
+    const cols = 6;
+    let newBoard = [];
 
-  useEffect(() => {
-    if (gameStarted) {
-      const newProfile = { score, level };
-      localStorage.setItem('player-profile', JSON.stringify(newProfile));
-    }
-  }, [score, level, gameStarted]);
-
-  const handleClick = (row, col) => {
-    if (!gameStarted) return;
-    if (selected) {
-      const [prevRow, prevCol] = selected;
-      const isAdjacent =
-        (Math.abs(prevRow - row) === 1 && prevCol === col) ||
-        (Math.abs(prevCol - col) === 1 && prevRow === row);
-
-      if (isAdjacent) {
-        const newBoard = [...board.map(row => [...row])];
-        const temp = newBoard[row][col];
-        newBoard[row][col] = newBoard[prevRow][prevCol];
-        newBoard[prevRow][prevCol] = temp;
-        setBoard(newBoard);
-        setTimeout(() => checkCombinations(newBoard), 300);
-        playSound('move'); 
+    for (let i = 0; i < rows; i++) {
+      let row = [];
+      for (let j = 0; j < cols; j++) {
+        const randomPokemon = shufflePokemon[Math.floor(Math.random() * shufflePokemon.length)];
+        row.push(randomPokemon);
       }
-      setSelected(null);
-    } else {
-      setSelected([row, col]);
+      newBoard.push(row);
     }
-  };
-
-  
-  const checkCombinations = (boardToCheck) => {
-    let found = false;
-    const matches = Array.from({ length: BOARD_ROWS }, () => Array(BOARD_COLS).fill(false));
-
-    for (let row = 0; row < BOARD_ROWS; row++) {
-      for (let col = 0; col < BOARD_COLS - 2; col++) {
-        if (
-          boardToCheck[row][col].id === boardToCheck[row][col + 1].id &&
-          boardToCheck[row][col].id === boardToCheck[row][col + 2].id
-        ) {
-          matches[row][col] = matches[row][col + 1] = matches[row][col + 2] = true;
-          found = true;
-        }
-      }
-    }
-
-    for (let col = 0; col < BOARD_COLS; col++) {
-      for (let row = 0; row < BOARD_ROWS - 2; row++) {
-        if (
-          boardToCheck[row][col].id === boardToCheck[row + 1][col].id &&
-          boardToCheck[row][col].id === boardToCheck[row + 2][col].id
-        ) {
-          matches[row][col] = matches[row + 1][col] = matches[row + 2][col] = true;
-          found = true;
-        }
-      }
-    }
-
-    if (found) {
-      let newScore = score;
-      const newBoard = boardToCheck.map((row, rowIndex) =>
-        row.map((cell, colIndex) => {
-          if (matches[rowIndex][colIndex]) {
-            newScore += 10;
-            return getRandomPokemon();
-          }
-          return cell;
-        })
-      );
-      setScore(newScore);
-      setBoard(newBoard);
-      playSound('combo'); 
-
-    
-      setTimeout(() => checkCombinations(newBoard), 300);
-    } else {
-      if (score >= LEVEL_UP_SCORE * level) {
-        setLevel(level + 1);
-        playSound('level-up');
-        alert(`¡Nivel ${level} superado!`);
-      } else if (score >= LEVEL_UP_SCORE * (level + 1)) {
-        onGameOver();
-      }
-    }
-  };
-
-
-  if (!gameStarted) {
-    return (
-      <div className="flex flex-col items-center gap-4 mt-10">
-        <h1 className="text-3xl font-bold">Pokémon Shuffle</h1>
-        <button
-          onClick={() => setGameStarted(true)}
-          className="bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700"
-        >
-          Comenzar Juego
-        </button>
-      </div>
-    );
+    return newBoard;
   }
 
+  // Detecta combinaciones de tres o más Pokémon
+  function checkMatches() {
+    let matches = [];
+    // Horizontal
+    for (let row = 0; row < board.length; row++) {
+      for (let col = 0; col < board[row].length - 2; col++) {
+        if (
+          board[row][col].id === board[row][col + 1].id &&
+          board[row][col].id === board[row][col + 2].id
+        ) {
+          matches.push({ type: 'horizontal', row, col });
+        }
+      }
+    }
+
+    // Vertical
+    for (let col = 0; col < board[0].length; col++) {
+      for (let row = 0; row < board.length - 2; row++) {
+        if (
+          board[row][col].id === board[row + 1][col].id &&
+          board[row][col].id === board[row + 2][col].id
+        ) {
+          matches.push({ type: 'vertical', row, col });
+        }
+      }
+    }
+
+    return matches;
+  }
+
+  // Elimina las combinaciones encontradas y actualiza la puntuación
+  function removeMatches(matches) {
+    let newBoard = [...board];
+    let points = 0;
+
+    matches.forEach((match) => {
+      if (match.type === 'horizontal') {
+        for (let i = 0; i < 3; i++) {
+          newBoard[match.row][match.col + i] = null; // Elimina los Pokémon
+        }
+        points += 100; // Incrementa la puntuación
+      }
+
+      if (match.type === 'vertical') {
+        for (let i = 0; i < 3; i++) {
+          newBoard[match.row + i][match.col] = null; // Elimina los Pokémon
+        }
+        points += 100; // Incrementa la puntuación
+      }
+    });
+
+    setScore(score + points); // Aumenta la puntuación global
+    setBoard(newBoard);
+    return points;
+  }
+
+  // Rellena las casillas vacías con nuevos Pokémon
+  function refillBoard() {
+    let newBoard = [...board];
+    for (let row = 0; row < newBoard.length; row++) {
+      for (let col = 0; col < newBoard[row].length; col++) {
+        if (newBoard[row][col] === null) {
+          const randomPokemon = shufflePokemon[Math.floor(Math.random() * shufflePokemon.length)];
+          newBoard[row][col] = randomPokemon;
+        }
+      }
+    }
+    setBoard(newBoard);
+  }
+
+  // Función de animación y detección de combinaciones
+  useEffect(() => {
+    if (!isAnimating) {
+      const matches = checkMatches();
+      if (matches.length > 0) {
+        const points = removeMatches(matches);
+        setIsAnimating(true); // Activar animación
+        setTimeout(() => {
+          refillBoard(); // Rellenar las casillas vacías después de la animación
+          setIsAnimating(false); // Desactivar animación
+        }, 500); // Espera para terminar la animación
+      }
+    }
+  }, [board, isAnimating]);
+
+  // Función para manejar el clic en una loseta
+  const handleTileClick = (rowIndex, colIndex) => {
+    if (isAnimating) return;
+
+    const newBoard = [...board];
+    const temp = newBoard[rowIndex][colIndex];
+    if (colIndex + 1 < board[rowIndex].length) {
+      newBoard[rowIndex][colIndex] = newBoard[rowIndex][colIndex + 1];
+      newBoard[rowIndex][colIndex + 1] = temp;
+      setBoard(newBoard);
+    }
+  };
+
   return (
-    <div className="grid grid-cols-6 gap-1 p-2">
-      {board.map((row, rowIndex) =>
-        row.map((cell, colIndex) => (
-          <div
-            key={`${rowIndex}-${colIndex}`}
-            className={`bg-zinc-800 border-2 transition-all duration-200 ease-in-out transform hover:scale-105 cursor-pointer
-              ${selected && selected[0] === rowIndex && selected[1] === colIndex
-                ? 'border-yellow-400'
-                : 'border-transparent'}`}
-            onClick={() => handleClick(rowIndex, colIndex)}
-          >
-            <img
-              src={cell.image}
-              alt={cell.name}
-              className="w-12 h-12 transition-transform duration-300 hover:rotate-6"
+    <div className="board">
+      {board.map((row, rowIndex) => (
+        <div key={rowIndex} className="row">
+          {row.map((pokemon, colIndex) => (
+            <Tile
+              key={colIndex}
+              pokemon={pokemon}
+              onClick={() => handleTileClick(rowIndex, colIndex)}
             />
-          </div>
-        ))
-      )}
+          ))}
+        </div>
+      ))}
+      <div className="score">
+        <h2>Score: {score}</h2>
+      </div>
     </div>
   );
 };

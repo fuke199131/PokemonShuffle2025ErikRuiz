@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import App from '/workspaces/PokemonShuffle2025ErikRuiz/src/componentes/tablero.jsx';
+import './styles.css';
+import App from './App';
 
 ReactDOM.render(
   <React.StrictMode>
